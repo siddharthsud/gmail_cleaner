@@ -8,11 +8,23 @@ import getpass  # for password
 import os
 import time
 
+import hjson
+from dotenv import load_dotenv
+
+# Load the default envs file
+load_dotenv()
+
+# Load the other envs file - required
+project_folder = os.path.expanduser('./envs/')  # adjust as appropriate
+file_name = os.getenv("CURRENT_ENV") + '.env'
+load_dotenv(os.path.join(project_folder, file_name))
+
+
 # Default values for click position
 xpos = 0  # xposition of the click
 ypos = 0  # yposition of the click
 
-
+# Configurations Hardcoded
 # query = {"query_term": "", "no_of_times": 0}
 # tabs = {"Primary": 0, "Social": 0, "Promotions": 0, "Forums": 0}
 # is_otp_enabled = false
@@ -21,7 +33,8 @@ ypos = 0  # yposition of the click
 # Function that initializes the Chrome driver
 def init_driver():
     # setting up chromedriver
-    chromedriver = "/home/siddharth/python_scripts/gmail_cleaner/chromedriver"
+    cwd = os.getcwd()
+    chromedriver = os.path.join(cwd, "chromedriver")
     os.environ["webdriver.chrome.driver"] = chromedriver
     driver = webdriver.Chrome(chromedriver)
     driver.wait = WebDriverWait(driver, 30)  # 20 seconds of polling for page wait
@@ -29,31 +42,36 @@ def init_driver():
 
     return driver
 
+def config_auth(func):
+    def inner(config_param):
+        print("Configuration setting basis a file")
+        if (config_param["config_input"] == True):
+            return func()
+    return inner
 
 # Function to take in user preferences for settings
-def set_preferences(driver):
+def set_preferences(driver, config_param):
     # User account details
-    username = input("Enter gmail id:")
-    password = getpass.getpass("Enter password:")
+    username = config_param["config_input"]? config_param["username"] : input("Enter gmail id:")
+    password = config_param["config_input"]? config_param["password"] : getpass.getpass("Enter password:")
 
     # set preferences
-    ansotp = input("Is 2 step verification enabled using OTP for this site (Y/N)")
+    ansotp = config_param["config_input"]? config_param["is_otp_enabled"] : input("Is 2 step verification enabled using OTP for this site (Y/N)")
     is_otp_enabled = (True if ansotp == 'Y' else False)  # if using OTP in account
 
     # tabs specifies the number of times delete action must be performed on each tab
     tabs = {"Primary": 0, "Social": 1, "Promotions": 0, "Forums": 0, "Updates": 0}
 
     try:
-        skip_first_mail = input("How many initial mail pages to skip?")
+        skip_first_mail = config_param["config_input"]? config_param["skip_first_mail"] : input("How many initial mail pages to skip?")
         skip_first_mail = int(skip_first_mail)  # Convert to int
-        ans = input("Would you like to delete Tabs(T) or Query(Q)")
+        ans = config_param["config_input"]? config_param["Tabs_Query"] : input("Would you like to delete Tabs(T) or Query(Q)")
         if ans == 'Q':
             try:
                 query = {"query_term": "", "no_of_times": 0}  # Initializing query
-                query["query_term"] = input("Enter Search Query: ")
+                query["query_term"] = config_param["config_input"]? config_param["query"]["query_term"] : input("Enter Search Query: ")
                 try:
-                    query["no_of_times"] = int(
-                        input("Enter Number of times to repeat action: "))  # Convert input into integer
+                    query["no_of_times"] = config_param["config_input"]? config_param["query"]["no_of_times"] : int(input("Enter Number of times to repeat action: "))  # Convert input into integer
                 except ValueError:
                     raise ValueError
                 except Exception as e:
@@ -66,10 +84,10 @@ def set_preferences(driver):
         elif ans == 'T':
             # Give selection for Tabs
             for i in tabs.keys():
-                ans = input("Would you like to delete mails in " + i + "tab (Y/N)? :")
+                ans = config_param["config_input"]? (config_param["tabs"][i] > 0 ? 'Y': 'N') : input("Would you like to delete mails in " + i + "tab (Y/N)? :")
                 if ans == 'Y':
                     try:
-                        tabs[i] = input("Enter Number of times to repeat action for " + i + " tab :")
+                        tabs[i] = config_param["config_input"]? config_param["tabs"][i] : input("Enter Number of times to repeat action for " + i + " tab :")
                     except ValueError:
                         raise ValueError
                     except Exception as e:
@@ -283,6 +301,13 @@ def run_tabs(driver, tabs, skip_first_mail):
 
 if __name__ == "__main__":
     driver = init_driver()
-    set_preferences(driver)
+
+    # Load the Hjson config
+    with open("config.hjson") as file:
+        file_contents = file.read()
+        config_param = hjson.loads(file_contents)  # Load config file params from Hjson file
+        # print(config_params)
+
+    set_preferences(driver, config_param)
     time.sleep(5)
     driver.quit()

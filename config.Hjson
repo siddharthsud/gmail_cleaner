@@ -1,0 +1,36 @@
+{
+
+    # Sets the config_input type : True = File input / False = Manual input
+    config_input : true
+
+    # Username for the login id
+    username : ""
+
+    # Password for the login id
+    password : ""
+
+    # Two Factor is enabled for the login
+    is_otp_enabled : true
+
+    # Initial Pages to skip
+    skip_first_mail : 10
+
+    # Tabs or Query selection ( 'T' : Tabs / 'Q' : Query)
+    Tabs_Query : 'T'
+
+    # Optional incase Tabs is selected. Mention the tabname against the number of times the action should be repeated ( 'Tabname' : 'No. of times')
+    tabs : {
+        Primary: 0
+        Social: 1
+        Promotions: 0
+        Forums: 0
+        Updates: 0
+     }
+
+    # Optional incase Query is selected
+    query : {
+        query_term: "SAMPLE"
+        no_of_times: 0
+    }
+
+}
